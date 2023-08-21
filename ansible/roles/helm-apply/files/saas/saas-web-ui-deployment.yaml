@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: saas-web-ui
+  namespace: saas
+  labels:
+    app: saas
+    component: saas-web-ui
+spec:
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  replicas: 2
+  selector:
+    matchLabels:
+      app: saas
+      component: saas-web-ui
+  template:
+    metadata:
+      labels:
+        app: saas
+        component: saas-web-ui
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 60
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  component: saas-web-ui
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: saas-web-ui
+          image: saas-web-ui:develop
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/usr/sbin/nginx","-s","quit"]
+          env:
+            - name: APP_NAME
+              value: saas-web-ui
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - containerPort: 80
+              name: http
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 1
+            failureThreshold: 2
+          livenessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 80
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+            periodSeconds: 30
+          volumeMounts:
+            - name: saas-web-ui-config-volume
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: saas-web-ui-config-volume
+          configMap:
+            name: webui-config

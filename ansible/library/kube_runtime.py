@@ -93,7 +93,8 @@ class RuntimeBase(object):
             'containerd-node': []
         }
         for image in kube_images.split():
-            image_repo = image.split(':')[0]
+            image_repo = image[:image.rindex(":")]
+            #image_repo = ":".join(image.split(':')[:-1])
             image_name = image_repo.split('/')[-1]
             if image_name in master_images:
                 images_map['docker-master'].append(image)

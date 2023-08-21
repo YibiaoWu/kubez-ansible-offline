@@ -1,0 +1,171 @@
+apiVersion: "clickhouse.altinity.com/v1"
+kind: "ClickHouseInstallation"
+
+metadata:
+  name: clickhouse
+  namespace: database
+
+spec:
+  defaults:
+    templates: 
+      dataVolumeClaimTemplate: default
+      podTemplate: clickhouse:21.6
+      serviceTemplate: chi-service-template
+      replicaServiceTemplate: replica-service-template
+ 
+  configuration:
+    settings:
+      http_port: 8123
+      tcp_port: 9000
+      interserver_http_port: 9009
+      path: "/data/clickhouse"
+      timezone: "Asia/Shanghai"
+      max_partition_size_to_drop: "0"
+      distributed_ddl/max_tasks_in_queue: "1000"
+      distributed_ddl/task_max_lifetime: "7776000"
+      distributed_ddl/cleanup_delay_period: "60"
+      merge_tree/max_suspicious_broken_parts: "500"
+      merge_tree/max_suspicious_broken_parts_bytes: 1073741824000
+      logger/level: "information"
+      merge_tree/parts_to_delay_insert: "300"
+      merge_tree/parts_to_throw_insert: "600"
+    zookeeper:
+      nodes:
+      - host: zk-zookeeper.zookeeper
+    profiles:
+      clickhouse_operator/async_insert: "1"
+      clickhouse_operator/async_insert_busy_timeout_ms: "200"
+      clickhouse_operator/async_insert_max_data_size: "10000"
+      clickhouse_operator/async_insert_threads: "32"
+      clickhouse_operator/wait_for_async_insert: "1"
+      clickhouse_operator/distributed_ddl_task_timeout: "0"
+      default/distributed_ddl_task_timeout: "0"
+      default/async_insert: "1"
+      default/async_insert_busy_timeout_ms: "200"
+      default/async_insert_max_data_size: "10000"
+      default/async_insert_threads: "32"
+      default/wait_for_async_insert: "1"
+      default/allow_experimental_map_type: "1"
+      default/distributed_product_mode: "allow"
+      default/max_memory_usage: "72000000000"
+      default/max_query_size: "10000000000"
+      default/input_format_skip_unknown_fields: "1"
+      clickhouse_operator/log_queries: "1"
+      default/skip_unavailable_shards: "1"
+      default/connect_timeout_with_failover_ms: "10"
+    files:
+      users.d/chop-generated-users.xml: |
+        <yandex>
+            <users>
+                <default>
+                    <networks>
+                        <host_regexp>(chi-clickhouse-[^.]+\d+-\d+|clickhouse\-clickhouse)\.database\.svc\.cluster\.local$</host_regexp>
+                        <ip>::1</ip>
+                        <ip>127.0.0.1</ip>
+                        <ip>0.0.0.0/0</ip>
+                    </networks>
+                    <profile>default</profile>
+                    <quota>default</quota>
+                </default>
+            </users>
+        </yandex>
+    clusters:
+      - name: replicated
+        layout:
+          shardsCount: 1
+          replicasCount: 1
+
+  templates:
+    volumeClaimTemplates:
+      - name: default
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 100Gi
+    podTemplates:
+      - name: clickhouse:21.6
+        podDistribution:
+          - type: "ClickHouseAntiAffinity"
+        spec:
+          containers:
+            - name: clickhouse-pod
+              image: ck-ftp:0.0.3
+              ports:
+                - name: http
+                  containerPort: 8123
+                - name: tcp
+                  containerPort: 9000
+                - name: interserver
+                  containerPort: 9009
+              resources:
+                requests:
+                  memory: 8Gi
+                  cpu: '2000m'
+                limits:
+                  memory: 72Gi
+                  cpu: '24000m'
+              volumeMounts:
+                - name: default
+                  mountPath: /data/clickhouse
+                - name: timezone
+                  mountPath: /etc/localtime
+                - name: backup
+                  mountPath: /data/backup
+              startupProbe:
+                httpGet:
+                  path: /ping
+                  port: http
+                failureThreshold: 60
+                initialDelaySeconds: 30
+                timeoutSeconds: 10
+                periodSeconds: 10
+              livenessProbe:
+                httpGet:
+                  path: /ping
+                  port: http
+                initialDelaySeconds: 10
+                timeoutSeconds: 10
+                periodSeconds: 30
+              readinessProbe:
+                httpGet:
+                  path: /ping
+                  port: http
+                initialDelaySeconds: 10
+                timeoutSeconds: 10
+                periodSeconds: 10
+          volumes:
+            - name: timezone
+              hostPath:
+                path: /usr/share/zoneinfo/Asia/Shanghai
+            - name: backup
+              hostPath:
+                path: /data/ck--bak
+    serviceTemplates:
+      - name: chi-service-template
+        generateName: "{chi}"
+        spec:
+          ports:
+            - name: http
+              port: 8124
+              targetPort: 8123
+            - name: tcp
+              port: 9001
+              targetPort: 9000
+          type: ClusterIP
+          
+      - name: replica-service-template
+        # type ServiceSpec struct from k8s.io/core/v1
+        spec:
+          ports:
+            - name: http
+              port: 8123
+              targetPort: 8123
+            - name: tcp
+              port: 9000
+              targetPort: 9000
+            - name: interserver
+              port: 9009
+              targetPort: 9009
+          type: ClusterIP

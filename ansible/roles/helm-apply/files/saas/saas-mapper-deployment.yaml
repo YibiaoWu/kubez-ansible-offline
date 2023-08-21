@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: saas-mapper
+  namespace: saas
+  labels:
+    app: saas
+    component: saas-mapper
+spec:
+  replicas: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: saas
+      component: saas-mapper
+  template:
+    metadata:
+      labels:
+        app: saas
+        component: saas-mapper
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 20
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  component: saas-mapper
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: saas-mapper
+          image: core.harbor.domain/soc/saas:develop-70383233e
+          env:
+            - name: MODE
+              value: mapper
+            - name: APP_NAME
+              value: saas-mapper
+            - name: JAVA_OPTS
+              value: -XX:+UseG1GC -Xms4G -Xmx12G  -Dfastjson.parser.safeMode=true -Dcsp.sentinel.dashboard.server=sentinel-dashboard.monitor.svc.cluster.local:8081
+            - name: APP_OPTS
+              value: -Dmapper.mode=run
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              memory: 1Gi
+              cpu: '8'
+            limits:
+              memory: 16Gi
+              cpu: '16'
+          volumeMounts:
+            - name: saas-mapper-config-volume
+              mountPath: /opt/saas/conf/conf.d
+          startupProbe:
+            httpGet:
+              path: /status
+              port: 19999
+            failureThreshold: 30
+            timeoutSeconds: 20
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: 19999
+            initialDelaySeconds: 10
+            timeoutSeconds: 20
+            periodSeconds: 60
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: 19999
+            initialDelaySeconds: 10
+            timeoutSeconds: 20
+            periodSeconds: 10
+      volumes:
+        - name: saas-mapper-config-volume
+          configMap:
+            name: saas-config

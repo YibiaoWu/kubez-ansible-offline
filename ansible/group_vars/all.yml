@@ -6,6 +6,9 @@ network_interface: "eth0"
 api_interface: "{{ network_interface }}"
 api_interface_address: "{{ hostvars[inventory_hostname]['ansible_' + api_interface]['ipv4']['address'] }}"
 
+# ntpserver 配置
+ntpdate_enable: "no"
+
 # kubernetes 镜像仓库地址，默认阿里云，用户可根据实际情况配置
 image_repository: "registry.cn-hangzhou.aliyuncs.com/google_containers"
 image_repository_daemon: "{{ image_repository_daemon }}"
@@ -26,6 +29,7 @@ keepalived_virtual_router_id: "68"
 #####################
 kube_application_dir: "/tmp/pixiuspace"
 kubez_namespace: pixiu-system
+helm_charts_dir: "/tmp/helmcharts"
 
 # This should be a VIP, an unused IP on your network that will float between
 # the hosts running keepalived for high-availability.
@@ -53,7 +57,7 @@ enable_kubernetes_ha: "no"
 enable_haproxy: "no"
 enable_metrics_server: "yes"
 enable_rbd_provisioner: "no"
-enable_ingress_nginx: "yes"
+enable_ingress_nginx: "no"
 
 # Addon helm charts
 kube_release: 1.23.6
@@ -172,6 +176,7 @@ ceph_key: QVFCdzN6NWVGMjJCTFJBQVcvMkU2a051UW1JSHU1VTRXZ2ZEd3c9PQ==
 # https://github.com/prometheus-operator/kube-prometheus
 # version is v0.6.0
 enable_prometheus: "no"
+enable_prometheus_localpath: "no"
 prometheus_namespace: "{{ kubez_namespace }}"
 
 ###############
@@ -179,6 +184,7 @@ prometheus_namespace: "{{ kubez_namespace }}"
 ###############
 # https://github.com/minio/minio
 enable_minio: "no"
+enable_minio_localpath: "no"
 
 minio_name: minio
 minio_namespace: "{{ kubez_namespace }}"
@@ -199,6 +205,7 @@ minio_rootPassword: minioadmin
 # Grafana Options
 #################
 enable_grafana: "no"
+enable_grafana_localpath: "no"
 grafana_namespace: "{{ kubez_namespace }}"
 
 # Customize grafana user and password
@@ -209,6 +216,7 @@ grafana_admin_password: admin
 # Loki Options
 ##############
 enable_loki: "no"
+enable_loki_localpath: "no"
 loki_namespace: "{{ kubez_namespace }}"
 
 # Storage class to be used
@@ -242,6 +250,7 @@ s3:
 # promtail Options
 ##################
 enable_promtail: "no"
+enable_promtail_localpath: "no"
 promtail_namespace: "{{ kubez_namespace }}"
 
 # loki server
@@ -252,6 +261,7 @@ loki_url: http://loki-gateway/loki/api/v1/push
 ########################
 # The Fluentd, elasticsearch, and kibana will be installed when enabled.
 enable_elasticsearch: "no"
+enable_elasticsearch_localpath: "no"
 elasticsearch_name: elasticsearch
 elasticsearch_namespace: "{{ kubez_namespace }}"
 elasticsearch_chart_version: 8.5.1
@@ -263,6 +273,7 @@ minimum_master_nodes: 1 # 生产环境至少为 2 节点
 # Filebeat Options
 ###################
 enable_filebeat: "no"
+enable_filebeat_localpath: "no"
 filebeat_name: filebeat
 filebeat_namespace: "{{ kubez_namespace }}"
 filebeat_chart_version: 8.5.1
@@ -271,6 +282,7 @@ filebeat_chart_version: 8.5.1
 # Kibana Options
 #################
 enable_kibana: "no"
+enable_kibana_localpath: "no"
 kibana_name: kibana
 kibana_namespace: "{{ kubez_namespace }}"
 kibana_chart_version: 8.5.1
@@ -281,9 +293,25 @@ kibana_replicas: 1
 # Fluentd Options
 ##################
 enable_fluentd: "no"
+enable_fluentd_localpath: "no"
 fluentd_name: fluentd
 fluentd_namespace: "{{ kubez_namespace }}"
 fluentd_chart_version: 0.3.9
+
+###########################
+# Traefik Options
+###########################
+traefik_name: "traefik"
+traefik_namespace: "kube-system"
+enable_traefik: "no"
+enable_traefik_localpath: "no"
+traefikcrd_name: "traefik-crd"
+traefikcrd_namespace: "kube-system"
+enable_traefikcrd: "no"
+enable_traefikcrd_localpath: "no"
+traefik_extra_vars_dict:
+  image.name: "10.50.2.253:58001/pixiuio/mirrored-library-traefik"
+  image.tag: "2.6.1"
 
 ###########################
 # Kubez-autoscaler Options
@@ -294,6 +322,7 @@ enable_hpav2: "no"
 # Jenkins Options
 ##################
 enable_jenkins: "no"
+enable_jenkins_localpath: "no"
 
 jenkins_namespace: "{{ kubez_namespace }}"
 jenkins_storage_class: managed-nfs-storage
@@ -306,6 +335,7 @@ initial_admin_password: "admin123456"
 # Harbor Options
 #################
 enable_harbor: "no"
+enable_harbor_localpath: "no"
 harbor_name: harbor
 harbor_namespace: "{{ kubez_namespace }}"
 
@@ -375,12 +405,14 @@ rabbitmq_namespace: operators
 # Istio Options
 ################
 enable_istio: "no"
+enable_istio_localpath: "no"
 istio_chart_version: 1.16.1
 
 ####################
 # Dashboard Options
 ####################
 enable_dashboard: "no"
+enable_dashboard_localpath: "no"
 dashboard_chart_version: 6.0.0
 
 dashboard_name: kubernetes-dashboard
@@ -394,32 +426,52 @@ dashboard_node_port: 30001
 enable_charts:
   - name: minio
     enabled: "{{ enable_minio | bool }}"
+    localpath: "{{ enable_minio_localpath | bool }}"
   - name: prometheus
     enabled: "{{ enable_prometheus | bool }}"
+    localpath: "{{ enable_prometheus_localpath | bool }}"
   - name: grafana
     enabled: "{{ enable_grafana | bool }}"
+    localpath: "{{ enable_grafana_localpath | bool }}"
   - name: loki
     enabled: "{{ enable_loki | bool }}"
+    localpath: "{{ enable_loki_localpath | bool }}"
   - name: promtail
     enabled: "{{ enable_promtail | bool }}"
+    localpath: "{{ enable_promtail_localpath | bool }}"
   - name: jenkins
     enabled: "{{ enable_jenkins | bool }}"
+    localpath: "{{ enable_jenkins_localpath | bool }}"
   - name: harbor
     enabled: "{{ enable_harbor | bool }}"
+    localpath: "{{ enable_harbor_localpath | bool }}"
   - name: istio-base
     enabled: "{{ enable_istio | bool}}"
+    localpath: "{{ enable_istio_localpath | bool }}"
   - name: istiod
     enabled: "{{ enable_istio | bool}}"
+    localpath: "{{ enable_istio_localpath | bool }}"
   - name: dashboard
     enabled: "{{ enable_dashboard | bool }}"
+    localpath: "{{ enable_dashboard_localpath | bool }}"
   - name: elasticsearch
     enabled: "{{ enable_elasticsearch | bool }}"
+    localpath: "{{ enable_elasticsearch_localpath | bool }}"
   - name: kibana
     enabled: "{{ enable_kibana | bool }}"
+    localpath: "{{ enable_kibana_localpath | bool }}"
   - name: filebeat
     enabled: "{{ enable_filebeat | bool }}"
+    localpath: "{{ enable_filebeat_localpath | bool }}"
   - name: fluentd
     enabled: "{{ enable_fluentd | bool }}"
+    localpath: "{{ enable_fluentd_localpath | bool }}"
+  - name: traefik-crd
+    enabled: "{{ enable_traefikcrd | bool }}"
+    localpath: "{{ enable_traefikcrd_localpath | bool }}"
+  - name: traefik
+    enabled: "{{ enable_traefik | bool }}"
+    localpath: "{{ enable_traefik_localpath | bool }}"
 
 charts:
   prometheus:
@@ -453,6 +505,7 @@ charts:
       adminPassword: "{{ grafana_admin_password }}"
     chart_extra_flags:
       - create-namespace
+
   loki:
     name: loki
     namespace: "{{ loki_namespace }}"
@@ -558,6 +611,7 @@ charts:
     chart_extra_flags:
       - create-namespace
     chart_extra_vars: {}
+
   istiod:
     name: istiod
     namespace: istio-system
@@ -582,6 +636,28 @@ charts:
       version: "{{ dashboard_chart_version }}"
     chart_extra_vars: {}
 
+  traefik:
+    name: "{{ traefik_name }}"
+    namespace: "{{ traefik_namespace }}"
+    repository:
+      name: traefik
+      url: https://traefik.github.io/charts
+    chart:
+      path: '{{ traefik_path | default("traefik/traefik") }}'
+      version: '{{ traefik_chart_version | default("2.6.0") }}'
+    chart_extra_vars: '{{ traefik_extra_vars_dict }}'
+
+  traefik-crd:
+    name: "{{ traefikcrd_name }}"
+    namespace: "{{ traefikcrd_namespace }}"
+    repository:
+      name: traefik-crd
+      url: https://traefik.github.io/charts
+    chart:
+      path: '{{ traefikcrd_path | default("traefik/traefik-crd") }}'
+      version: '{{ traefikcrd_chart_version | default("2.6.0") }}'
+    chart_extra_vars: {}
+
   elasticsearch:
     name: "{{ elasticsearch_name }}"
     namespace: "{{ elasticsearch_namespace }}"
@@ -595,6 +671,7 @@ charts:
       replicas: "{{ elasticsearch_replicas }}"
       minimumMasterNodes: "{{ minimum_master_nodes }}"
       persistence.enabled: "false" # 暂时关闭，后续启用 storageclass
+
   kibana:
     name: "{{ kibana_name }}"
     namespace: "{{ kibana_namespace }}"
@@ -606,6 +683,7 @@ charts:
       version: "{{ kibana_chart_version }}"
     chart_extra_vars:
       replicas: "{{ kibana_replicas }}"
+
   filebeat:
     name: "{{ filebeat_name }}"
     namespace: "{{ filebeat_namespace }}"
@@ -616,6 +694,7 @@ charts:
       path: elastic/filebeat
       version: "{{ filebeat_chart_version }}"
     chart_extra_vars: {}
+
   fluentd:
     name: "{{ fluentd_name }}"
     namespace: "{{ fluentd_namespace }}"

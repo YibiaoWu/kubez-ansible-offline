@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinel-dashboard
+  namespace: monitor
+  labels:
+    app: monitor
+    component: sentinel-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monitor
+      component: sentinel-dashboard
+  template:
+    metadata:
+      labels:
+        app: monitor
+        component: sentinel-dashboard
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 20
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  component: sentinel-dashboard
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: sentinel-dashboard
+          image: sentinel-dashboard:main
+          env:
+            - name: TZ
+              value: Asia/Shanghai
+            - name: JAVA_OPTS
+              value: "-Dspring.config.location=/opt/conf/application.properties"
+          ports:
+            - containerPort: 8080
+              name: http
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          volumeMounts:
+            - name: setninel-config
+              mountPath: "/opt/conf"
+      volumes:
+        - name: setninel-config
+          secret:
+            secretName: sentinel-secret

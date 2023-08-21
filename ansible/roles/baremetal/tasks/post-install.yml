@@ -1,1 +1,10 @@
 ---
+- name: Restart module service
+  systemd:
+    name: "{{ item.name }}"
+    daemon_reload: yes
+    state: restarted
+    enabled: yes
+  loop:
+    - {name: "crond"}
+    - {name: "chronyd"}

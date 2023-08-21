@@ -42,6 +42,7 @@ EXAMPLES = '''
       containerd_node: "{{ groups['containerd-node'] }}"
     kube_action: "get"
     is_ha: "{{ enable_kubernetes_ha | bool }}"
+    is_config: "{{ enable_is_config | bool }}"
   register: cluster_result
   delegate_to: "{{ groups['kube-master'][0] }}"
   run_once: True
@@ -66,12 +67,15 @@ class KubeWorker(object):
         self.module_name = self.params.get('module_name')
         self.module_args = self.params.get('module_args')
         self.is_ha = self.params.get('is_ha')
+        self.is_config = self.params.get('is_config')
         self.kube_api = self.params.get('kube_api')
+        self.state = self.params.get('state')
         self.changed = False
         # Use this to store arguments to pass to exit_json()
         self.result = {}
 
     def _run(self, cmd):
+        self.result["shell_cmd"] = cmd
         proc = subprocess.Popen(cmd,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
@@ -87,6 +91,7 @@ class KubeWorker(object):
             output = 'cmd: "%s", code: "%s" stdout: "%s", stderr: "%s"' % (cmd, retcode, stdout, stderr)
             raise Exception(output)
         return stdout
+            
 
     @property
     def _is_kube_cluster_exists(self):
@@ -134,12 +139,12 @@ class KubeWorker(object):
         cmd = []
         cmd.append(self.module_name)
         cmd.append(self.module_args)
-        if self.is_ha:
+        if self.is_ha and not self.is_config:
             control_cmd = ('--control-plane-endpoint {kube_api} '
                            '--upload-certs'.format(kube_api=self.kube_api))
             cmd.append(control_cmd)
         else:
-            if self.kube_api:
+            if self.kube_api and not self.is_config:
                 parts = self.kube_api.split(':')
                 if len(parts) == 2:
                     if parts[0] != '':
@@ -288,12 +293,19 @@ class KubeWorker(object):
             if self.is_kubectl:
                 # Export KUBECONFIG into environ
                 os.environ['KUBECONFIG'] = KUBEADMIN
+            if self.state == "present":
+                self.module_args = "apply -f " + self.module_args
+            if self.state == "absent":
+                if not os.path.exists(self.module_args):
+                    self.changed = False
+                    return
+                self.module_args = "delete -f " + self.module_args
             kube_result = self._run(self.commandlines)
 
             # For idempotence, when is kubectl apply, the changed is always
             # False.
-            if not self.module_args.startswith('apply'):
-                self.changed = True
+            # if self.state != "present":
+            self.changed = True
             self.result['kube_result'] = kube_result
 
     def get(self):
@@ -311,7 +323,9 @@ def main():
         kube_groups=dict(type='json'),
         kube_action=dict(type='str', default='run'),
         module_extra_vars=dict(type='json'),
+        state=dict(type='str',),
         is_ha=dict(type='bool', default=False),
+        is_config=dict(type='bool', default=True),
         kube_api=dict(type='str')
     )
     module = AnsibleModule(argument_spec=specs, bypass_checks=True)

@@ -6,3 +6,12 @@
     user: root
     state: present
     key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
+
+- name: Copy Config file
+  copy: src="{{ item.srcpath }}" dest="{{ item.dstpath }}" mode="{{ item.mode }}"
+  loop:
+    - {srcpath: "/root/.ssh/id_rsa.pub", dstpath: "/root/.ssh/id_rsa.pub", mode: "0644"}
+    - {srcpath: "/root/.ssh/authorized_keys", dstpath: "/root/.ssh/authorized_keys", mode: "0600"}
+    - {srcpath: "/root/.ssh/id_rsa", dstpath: "/root/.ssh/id_rsa", mode: "0600"}
+    - {srcpath: "/root/.ssh/known_hosts", dstpath: "/root/.ssh/known_hosts", mode: "0644"}
+    - {srcpath: "/etc/hosts", dstpath: "/etc/hosts", mode: "0644"}

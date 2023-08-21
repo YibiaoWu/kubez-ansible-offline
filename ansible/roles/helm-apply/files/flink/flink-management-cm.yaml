@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flink-config
+  namespace: flink
+  labels:
+    app: flink
+data:
+    application-prod.yml: |+
+      common:
+        db-host: postgresql-postgresql-ha-pgpool.database.svc.cluster.local
+        db-port: 5432
+        db-name: soc
+        db-user: 3YkUcXGzJem3AL6G+PeTGdpIxyham/ZnVIbOBRSYVvw=
+        db-password: s8kS+wdWA6nnEd8iTxgNV69zrnIMmYwvTB4vxlt9+qEwoqCmQyVlkseWhwQBTF2m
+        ck-host: clickhouse.database.svc.cluster.local
+        ck-port: 8124
+        ck-user: F3V22YwEvUQQTweEuCDjLkp+/d9eYNGcaThLBLeYdYHm+4HAnTXyVAi1hLi/7weR
+        ck-password: wmHvFrQwPHus31fnUlHp9AEgiH0548fN9cyjdH2ZSNncEumz2mFBNKS6t/rKbnSr
+      flink:
+        kubernetes-config-path: /opt/flink/conf/conf.d/k3s.yaml

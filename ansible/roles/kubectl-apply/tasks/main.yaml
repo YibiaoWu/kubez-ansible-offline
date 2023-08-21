@@ -10,8 +10,27 @@
     - name: Apply kubernetes application | {{ kube_application }}
       kube_toolbox:
         module_name: kubectl
-        module_args: "apply -f {{ kube_application_dir }}/{{ kube_application }}.yml"
+        state: present
+        module_args: "{{ kube_application_dir }}/{{ kube_application }}.yml"
       when: kube_apply_result.changed | bool
   delegate_to: "{{ groups['kube-master'][0] }}"
   run_once: True
   when: kube_enabled | bool
+
+- name: Delete kubernetes application | {{ kube_application }}
+  block:
+    - name: Delete kubernetes application | {{ kube_application }}
+      kube_toolbox:
+        module_name: kubectl
+        state: absent
+        module_args: "{{ kube_application_dir }}/{{ kube_application }}.yml"
+      register: kube_delete_result
+
+    - name: Delete {{ kube_application }} to the first master node
+      file:
+        path: "{{ kube_application_dir }}/{{ kube_application }}.yml"
+        state: absent
+      when: kube_delete_result.changed | bool
+  delegate_to: "{{ groups['kube-master'][0] }}"
+  run_once: True
+  when: not kube_enabled | bool

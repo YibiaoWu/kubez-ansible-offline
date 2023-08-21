@@ -1,0 +1,98 @@
+---
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
+#etcd:
+#  external:
+#    endpoints:
+#    - https://{{ kube_vip_address if enable_kubernetes_ha == 'yes' else api_interface_address }}:2379
+imageRepository: {{ image_repository }}
+kubernetesVersion: {{ kubernetes_version }}
+certificatesDir: /etc/kubernetes/pki
+clusterName: cluster.local
+controlPlaneEndpoint: {{ kube_vip_address if enable_kubernetes_ha == 'yes' else api_interface_address }}:{{ kube_vip_port }}
+networking:
+  dnsDomain: cluster.local
+  podSubnet: {{ cluster_cidr }}
+  serviceSubnet: {{ service_cidr }}
+apiServer:
+  extraArgs:
+    audit-log-maxage: "30"
+    audit-log-maxbackup: "10"
+    audit-log-maxsize: "100"
+    bind-address: 0.0.0.0
+    feature-gates: RotateKubeletServerCertificate=true,TTLAfterFinished=true,ExpandCSIVolumes=true,CSIStorageCapacity=true
+  certSANs:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    - localhost
+    - 127.0.0.1
+    - soc.kubesphere.local
+    - {{ api_interface_address }}
+    - {{ inventory_hostname }}
+    - {{ inventory_hostname }}.cluster.local
+controllerManager:
+  extraArgs:
+    node-cidr-mask-size: "24"
+    bind-address: 0.0.0.0
+    cluster-signing-duration: 87600h
+    feature-gates: RotateKubeletServerCertificate=true,TTLAfterFinished=true,ExpandCSIVolumes=true,CSIStorageCapacity=true
+  extraVolumes:
+  - name: host-time
+    hostPath: /etc/localtime
+    mountPath: /etc/localtime
+    readOnly: true
+scheduler:
+  extraArgs:
+    bind-address: 0.0.0.0
+    feature-gates: RotateKubeletServerCertificate=true,TTLAfterFinished=true,ExpandCSIVolumes=true,CSIStorageCapacity=true
+
+---
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: {{ kube_vip_address if enable_kubernetes_ha == 'yes' else api_interface_address }}
+  bindPort: {{ kube_vip_port }}
+nodeRegistration:
+  kubeletExtraArgs:
+    cgroup-driver: systemd
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+clusterCIDR: {{ cluster_cidr }}
+iptables:
+  masqueradeAll: false
+  masqueradeBit: 14
+  minSyncPeriod: 0s
+  syncPeriod: 30s
+mode: ipvs
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+clusterDomain: cluster.local
+#clusterDNS:
+#- 169.254.25.10
+evictionHard:
+  memory.available: 5%
+  pid.available: 10%
+evictionMaxPodGracePeriod: 120
+evictionPressureTransitionPeriod: 30s
+evictionSoft:
+  memory.available: 10%
+evictionSoftGracePeriod:
+  memory.available: 2m
+featureGates:
+  CSIStorageCapacity: true
+  ExpandCSIVolumes: true
+  RotateKubeletServerCertificate: true
+  TTLAfterFinished: true
+kubeReserved:
+  cpu: 200m
+  memory: 250Mi
+maxPods: 110
+podPidsLimit: 10000
+rotateCertificates: true
+systemReserved:
+  cpu: 200m
+  memory: 250Mi

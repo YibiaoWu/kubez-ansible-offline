@@ -1,8 +1,16 @@
 ---
 #####################
 # kubernetes options
+# This should be a VIP, an unused IP on your network that will float between
+# the hosts running keepalived for high-availability.
 #####################
-#enable_kubernetes_ha: "no"
+enable_kubernetes_ha: "no"
+
+#kube_vip_address: ""
+#kube_vip_address: "10.50.2.253"
+
+# Init k8s cluster on config file
+enable_is_config: "yes"
 
 kube_release: 1.23.17
 
@@ -11,11 +19,11 @@ service_cidr: "10.254.0.0/16"
 
 #Network interface is optional, the default vaule
 #is eth0.
-network_interface: "eth0"
+#network_interface: "eth0"
 
-# This should be a VIP, an unused IP on your network that will float between
-# the hosts running keepalived for high-availability.
-#kube_vip_address: ""
+# Ntp Server
+ntpserver: "ntp.ntsc.ac.cn"
+ntpdate_enable: "yes"
 
 # Listen port for kubernetes.
 # 启用 haproxy + keepalived 时, 监听端口推荐使用 8443
@@ -30,7 +38,8 @@ image_repository: "192.168.16.210:58001/pixiuio"
 # 离线部署时，指定 yum 源地址
 yum_baseurl: "http://192.168.16.210:58000/repository/pixiuio-centos"
 
-image_repository_daemon: "0.0.0.0/0"
+# image_repository_daemon: "0.0.0.0/0"
+image_repository_daemon: "core.harbor1.domain"
 
 ##################
 # Runtime Options
@@ -312,7 +321,7 @@ s3:
 #######################
 # Ingress Nginx Options
 #######################
-#enable_ingress_nginx: "yes"
+#enable_ingress_nginx: "no"
 
 #######################
 # Metrics Server Options

@@ -1,0 +1,216 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: saas-config
+  namespace: saas
+  labels:
+    app: saas
+data:
+  application.conf: |+
+    defaults {
+      machineId = 1
+      machineString = ${?machineId}
+    }
+    web = ${defaults} {
+      appCode = "web-"${defaults.machineString}
+      storeMetric = true
+    }
+    mapper = ${defaults} {
+      appCode = "mapper-"${defaults.machineString}
+      version = v1
+      consumer {
+        bootstrapServer = "kafka.kafka.svc.cluster.local:9092"
+        topic = "dragonfly.event.raw"
+        workThreadCount = 6
+      }
+      queue {
+        size = 1024
+        workThreadCount = 6
+      }
+      target {
+        bootstrapServer = "kafka.kafka.svc.cluster.local:9092"
+        topic = "dragonfly.event.mapped"
+      }
+      datasource {
+        jdbcUrl = "jdbc:postgresql://postgresql-postgresql-ha-pgpool.database.svc.cluster.local:5432/soc?ApplicationName=saas-mapper"
+        userName = "3YkUcXGzJem3AL6G+PeTGdpIxyham/ZnVIbOBRSYVvw="
+        password = "s8kS+wdWA6nnEd8iTxgNV69zrnIMmYwvTB4vxlt9+qEwoqCmQyVlkseWhwQBTF2m"
+      }
+    }
+    receiver = ${defaults} {
+      appCode = "receiver-"${defaults.machineString}
+      target {
+        bootstrapServer = "kafka.kafka.svc.cluster.local:9092"
+        topic = "dragonfly.event.raw"
+        workThreadCount = 10
+      }
+    }
+    clickhouse = ${defaults} {
+      appCode = "clickhouse-"${defaults.machineString}
+      consumer {
+        bootstrapServer = "kafka.kafka.svc.cluster.local:9092"
+        topic = "dragonfly.event.aggregation"
+        workThreadCount = 6
+      }
+      ckInserter {
+        jdbcUrl = "jdbc:clickhouse://clickhouse.database.svc.cluster.local:9001"
+        tableName = "soc"
+        threadNums = 6
+        batchCount = 15000
+        mapper = 0
+        sendKafka = false
+        username = "F3V22YwEvUQQTweEuCDjLkp+/d9eYNGcaThLBLeYdYHm+4HAnTXyVAi1hLi/7weR"
+        password = "wmHvFrQwPHus31fnUlHp9AEgiH0548fN9cyjdH2ZSNncEumz2mFBNKS6t/rKbnSr"
+      }
+    }
+    rpc {
+      server {
+        schema = "http"
+        host = "saas-web.saas.svc.cluster.local"
+        port = 80
+        apiKey = "S8lipDXAGONeEzWhkHytfMuJ4xdFYP97"
+      }
+    }
+    messageBus {
+      bootstrapServer = "kafka.kafka.svc.cluster.local:9092"
+    }
+    metric {
+      bootstrapServer = "kafka.kafka.svc.cluster.local:9092"
+      intervalMS = 1000
+      workCount = 6
+    }
+  application-prod.properties: |+
+    # server config
+    server.port=8080
+    spring.session.timeout=1800
+    # datasource 配置
+    spring.datasource.dynamic.datasource.defaultDataSource.url=jdbc:postgresql://postgresql-postgresql-ha-pgpool.database.svc.cluster.local:5432/soc?ApplicationName=saas-web
+    spring.datasource.dynamic.datasource.defaultDataSource.hikari.connection-timeout=30000
+    spring.datasource.dynamic.datasource.defaultDataSource.hikari.initialization-fail-timeout=60000
+    spring.datasource.dynamic.datasource.defaultDataSource.hikari.maximum-pool-size=1000
+    spring.datasource.dynamic.datasource.defaultDataSource.hikari.idle-timeout=180000
+    spring.datasource.dynamic.datasource.defaultDataSource.hikari.connection-test-query=SELECT 1;
+    spring.datasource.dynamic.datasource.defaultDataSource.hikari.validation-timeout=5000
+    spring.datasource.dynamic.datasource.defaultDataSource.hikari.max-lifetime=600000
+    spring.datasource.dynamic.datasource.defaultDataSource.username=3YkUcXGzJem3AL6G+PeTGdpIxyham/ZnVIbOBRSYVvw=
+    spring.datasource.dynamic.datasource.defaultDataSource.password=s8kS+wdWA6nnEd8iTxgNV69zrnIMmYwvTB4vxlt9+qEwoqCmQyVlkseWhwQBTF2m
+    # clickHouse datasource
+    spring.datasource.dynamic.datasource.clickHouseDataSource.url=jdbc:clickhouse://clickhouse.database.svc.cluster.local:9001
+    spring.datasource.dynamic.datasource.clickHouseDataSource.username=F3V22YwEvUQQTweEuCDjLkp+/d9eYNGcaThLBLeYdYHm+4HAnTXyVAi1hLi/7weR
+    spring.datasource.dynamic.datasource.clickHouseDataSource.password=wmHvFrQwPHus31fnUlHp9AEgiH0548fN9cyjdH2ZSNncEumz2mFBNKS6t/rKbnSr
+    # spring session config
+    spring.session.store-type=redis
+    spring.session.redis.cleanup-cron=0 */30 * * * ?
+    # redis 配置
+    spring.redis.lettuce.pool.max-active=200
+    spring.redis.lettuce.pool.max-idle=8
+    spring.redis.lettuce.pool.max-wait=60000ms
+    spring.redis.lettuce.pool.min-idle=1
+    spring.redis.lettuce.shutdown-timeout=10000ms
+    spring.redis.sentinel.master=mymaster
+    spring.redis.sentinel.nodes=redis-headless.cache.svc.cluster.local:26379
+    spring.redis.sentinel.password=mG8yWWH9ukgStk6aUdEV95kKQVhE5tLcr/WTjILxtls=
+    # 开发配置，生产不应该打开
+    swagger.enable=false
+    # 文件上传配置
+    spring.servlet.multipart.enabled=true
+    # 解析解析规则迁移开关
+    soc.mapper.package.transform.switch=true
+    spring.servlet.multipart.max-file-size=122880MB
+    spring.servlet.multipart.max-request-size=122880MB
+    soc.log.upload.max.size=1073741824
+    #kakf 指标
+    soc.kafka.bootstrap.servers=kafka.kafka.svc.cluster.local:9092
+    soc.kafka.metric.in.topic=dragonfly.event.mapped
+    soc.kafka.metric.in.properties.group.id=dragonflyMetric
+    soc.kafka.metric.out.topic=dragonfly.event.metric
+    #统计
+    soc.kafka.static.in.topic=dragonfly.event.metric
+    soc.kafka.static.in.properties.group.id=dragonflyStatic
+    soc.kafka.static.out.topic=dragonfly.event.statistic
+    #关联规则
+    soc.kafka.relation.in.topic=dragonfly.event.statistic,dragonfly.event.mapped
+    soc.kafka.relation.in.properties.group.id=dragonflyRelation
+    soc.kafka.relation.out.topic=dragonfly.event.relation
+    #kafka配置
+    spring.kafka.bootstrap-servers=kafka.kafka.svc.cluster.local:9092
+    spring.kafka.consumer.group-id=saas_web
+    spring.kafka.consumer.enable-auto-commit=false
+    spring.kafka.consumer.auto-offset-reset=latest
+    spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+    spring.kafka.consumer.value-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+    spring.kafka.listener.ack-mode=manual_immediate
+    #sentinel配置
+    spring.sentinel.username=t0W0ISDGvUG/T7AG/WDsG/aiSYb1hWwOnnmcOMlO4o8=
+    spring.sentinel.password=R25PZg3iR72QE1O8G9SQyP+wagHkjattnsX6EKB9qskBKdoABRP7dDcWwHVsiSxt
+    spring.flyway.enabled=false
+  log4j2.properties: |+
+    status=WARN
+    monitorInterval=30
+    name=PROPERTIES_CONFIGURATION
+
+    # Properties
+    property.LOG_PATH = /opt/saas/logs/
+    property.LOG_EXCEPTION_CONVERSION_WORD=%stcex{org.apache.coyote,org.apache.catalina,org.springframework}
+    property.LOG_LEVEL_PATTERN=%5p
+    property.LOG_DATE_FORMAT_PATTERN=yyyy-MM-dd HH:mm:ss.SSS
+    property.CONSOLE_LOG_PATTERN=%d{${LOG_DATE_FORMAT_PATTERN}} ${LOG_LEVEL_PATTERN} ${sys:PID} --- [%MT] %-40.40c{1.} : %m%n${LOG_EXCEPTION_CONVERSION_WORD}
+    property.FILE_LOG_PATTERN=%d{${LOG_DATE_FORMAT_PATTERN}} ${LOG_LEVEL_PATTERN} ${sys:PID} --- [%MT] %-40.40c{1.} : %m%n${LOG_EXCEPTION_CONVERSION_WORD}
+
+    #####################
+    # Console Appender
+    #####################
+    appender.console.type=Console
+    appender.console.name=Console
+    appender.console.target=SYSTEM_OUT
+    appender.console.follow=true
+    appender.console.layout.type=PatternLayout
+    appender.console.layout.pattern=${sys:CONSOLE_LOG_PATTERN}
+    appender.console.layout.alwaysWriteExceptions=false
+
+    #####################
+    # File Appender
+    #####################
+    appender.rolling.type=RollingFile
+    appender.rolling.name=RollingFile
+    appender.rolling.fileName=${LOG_PATH}main.log
+    appender.rolling.filePattern=${LOG_PATH}main.log.%d{yyyyMMdd}.log.gz
+    appender.rolling.layout.type=PatternLayout
+    appender.rolling.layout.pattern=${sys:FILE_LOG_PATTERN}
+    appender.rolling.layout.alwaysWriteExceptions=false
+    appender.rolling.policies.type=Policies
+
+    # Rotate log file each day and keep 90 days worth
+    appender.rolling.policies.time.type=TimeBasedTriggeringPolicy
+    appender.rolling.policies.time.interval=1
+    appender.rolling.policies.time.modulate=true
+    appender.rolling.strategy.type=DefaultRolloverStrategy
+    appender.rolling.strategy.delete.type=Delete
+    appender.rolling.strategy.delete.basePath=${LOG_PATH}
+    appender.rolling.strategy.delete.maxDepth=1
+    appender.rolling.strategy.delete.ifLastModified.type=IfLastModified
+    appender.rolling.strategy.delete.ifLastModified.age=90d
+
+    #####################
+    # Logger config for package/class
+    #####################
+    log4j.logger.org.apache.catalina.startup.DigesterFactory.level=ERROR
+    log4j.logger.org.apache.catalina.util.LifecycleBase.level=ERROR
+    log4j.logger.org.apache.coyote.http11.Http11NioProtocol.level=WARN
+    log4j.logger.org.apache.sshd.common.util.SecurityUtils.level=WARN
+    log4j.logger.org.apache.tomcat.util.net.NioSelectorPool.level=WARN
+    log4j.logger.org.eclipse.jetty.util.component.AbstractLifeCycle.level=ERROR
+    log4j.logger.org.hibernate.validator.internal.util.Version.level=WARN
+    log4j.logger.org.springframework.boot.actuate.endpoint.jmx.level=WARN
+    logger.kafkaProducerLogger.name=org.apache.kafka.clients.producer.ProducerConfig
+    logger.kafkaProducerLogger.level=WARN
+    logger.jComLogger.name=org.jinterop
+    logger.jComLogger.level=WARN
+
+    #####################
+    # Root Logger
+    #####################
+    rootLogger.level=INFO
+    rootLogger.additivity=false
+    rootLogger.appenderRef.rolling.ref=RollingFile
+    rootLogger.appenderRef.console.ref=Console

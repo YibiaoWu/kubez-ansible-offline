@@ -7,7 +7,7 @@
 # author: shujiangle
 
 # 本机ip
-LOCALIP="localhost"
+LOCALIP="${LOCALIP:-localhost}"
 
 # 镜像版本
 IMAGETAG="1.23.17"
@@ -18,8 +18,11 @@ USER="ptx9sk7vk7ow:003a1d6132741b195f332b815e8f98c39ecbcc1a"
 # 拉取的URL
 URL="https://pixiupkg-generic.pkg.coding.net"
 
+# 拉取CostumURL
+CostumURL="http://10.50.2.250:18080"
+
 # 当前路径, $pwd 可以更改路径
-PKGPWD=$pwd
+PKGPWD=$(cd `dirname $0`; pwd)
 
 # 判断LOCALIP是否修改
 printChangeIp() {
@@ -78,17 +81,7 @@ downloadNexus() {
 	# 准备 nexus 离线包
 	if [ ! -f "nexus.tar.gz" ]; then
 		echo "正在下载nexus"
-		curl -fL -u $USER $URL/pixiu/k8soffline/nexus.tar.gz?version=latest -o nexus.tar.gz
-	else
-		# nexus 的md5值
-		nexus_old_md5="f7224a5b7e4cc049fe59cb9c3898da76"
-		nexus_new_md5=$(md5sum nexus.tar.gz | awk '{print $1}')
-		if [ "$nexus_new_md5" == "$nexus_old_md5" ]; then
-			echo "nexus文件已经存在无需下载"
-		else
-			echo "nexus md5值不正确，开始重新下载"
-			curl -fL -u $USER $URL/pixiu/k8soffline/nexus.tar.gz?version=latest -o nexus.tar.gz
-		fi
+		curl -fL $CostumURL/kubez-ansible/nexus.tar.gz -o nexus.tar.gz
 	fi
 }
 
@@ -96,17 +89,7 @@ downloadRpm() {
 	# 准备 rpm 离线包
 	if [ ! -f "k8s-v${IMAGETAG}-rpm.tar.gz" ]; then
 		echo "正在下载k8s-v${IMAGETAG}-rpm.tar.gz"
-		curl -fL -u $USER $URL/pixiu/k8soffline/k8s-v$IMAGETAG-rpm.tar.gz?version=latest -o k8s-v${IMAGETAG}-rpm.tar.gz
-	else
-		# nexus 的md5值
-		rpm_old_md5="f95fdacb5d5d7261a3a25be69763122f"
-		rpm_new_md5=$(md5sum k8s-v${IMAGETAG}-rpm.tar.gz | awk '{print $1}')
-		if [ "$rpm_new_md5" == "$rpm_old_md5" ]; then
-			echo "k8s-v${IMAGETAG}-rpm.tar.gz文件已经存在无需下载"
-		else
-			echo "k8s-v${IMAGETAG}-rpm.tar.gz md5值不正确，开始重新下载"
-			curl -fL -u $USER $URL/pixiu/k8soffline/k8s-v$IMAGETAG-rpm.tar.gz?version=latest -o k8s-v${IMAGETAG}-rpm.tar.gz
-		fi
+		curl -fL $CostumURL/kubez-ansible/k8s-v$IMAGETAG-rpm.tar.gz -o k8s-v${IMAGETAG}-rpm.tar.gz
 	fi
 }
 
@@ -114,17 +97,7 @@ downloadImage() {
 	# 准备镜像离线包
 	if [ ! -f "k8s-centos7-v${IMAGETAG}_images.tar.gz" ]; then
 		echo "正在下载k8s-centos7-v${IMAGETAG}_images.tar.gz"
-		curl -fL -u $USER $URL/pixiu/allimagedownload/allimagedownload.tar.gz?version=latest -o k8s-centos7-v${IMAGETAG}_images.tar.gz
-	else
-		# nexus 的md5值
-		image_old_md5="f07343496ee591ca78ad25fb27af68d9"
-		image_new_md5=$(md5sum k8s-centos7-v${IMAGETAG}_images.tar.gz | awk '{print $1}')
-		if [ "$image_new_md5" == "$image_old_md5" ]; then
-			echo "k8s-centos7-v${IMAGETAG}_images.tar.gz文件已经存在无需下载"
-		else
-			echo "k8s-centos7-v${IMAGETAG}_images.tar.gz md5值不正确，开始重新下载"
-			curl -fL -u $USER $URL/pixiu/allimagedownload/allimagedownload.tar.gz?version=latest -o k8s-centos7-v${IMAGETAG}_images.tar.gz
-		fi
+		curl -fL $CostumURL/kubez-ansible/k8s-centos7-v${IMAGETAG}_images.tar.gz -o k8s-centos7-v${IMAGETAG}_images.tar.gz
 	fi
 
 }
@@ -133,24 +106,12 @@ downloadKubez() {
 	# 准备镜像离线包
 	if [ ! -f "kubez-ansible-offline-master.zip" ]; then
 		echo "正在下载kubez-ansible-offline-master.zip"
-		curl https://codeload.github.com/gopixiu-io/kubez-ansible-offline/zip/refs/heads/master -o kubez-ansible-offline-master.zip
-	else
-		# nexus 的md5值
-		kubez_old_md5="f8f17f550211fdcf65f8c73e4add170a"
-		kubez_new_md5=$(md5sum kubez-ansible-offline-master.zip | awk '{print $1}')
-		if [ "$kubez_new_md5" == "$kubez_old_md5" ]; then
-			echo "kubez-ansible-offline-master.zip文件已经存在无需下载"
-		else
-			echo "kubez-ansible-offline-master.zip md5值不正确，开始重新下载"
-			curl https://codeload.github.com/gopixiu-io/kubez-ansible-offline/zip/refs/heads/master -o kubez-ansible-offline-master.zip
-		fi
+		curl -fL $CostumURL/kubez-ansible/kubez-ansible-offline-master.zip -o kubez-ansible-offline-master.zip
 	fi
-	# 准备 kubez-ansible 离线包
-
 }
 
 check_nexus_status() {
-	curl localhost:58000 >/dev/null 2>&1
+	curl $LOCALIP:58000 >/dev/null 2>&1
 	if [ $? == 0 ]; then
 		echo -e "服务已经启动成功"
 		sleep 1
@@ -159,17 +120,25 @@ check_nexus_status() {
 }
 # 安装nexus
 installNexus() {
-	check_nexus_status
+	## Open nexus防火墙
+	[ "`systemctl is-active firewalld`" == "active" ] && firewall-cmd --add-port=58000-58001/tcp --permanent && firewall-cmd --reload
+
+	##Custom Nexus Server Check
+	curl $LOCALIP:58000 >/dev/null 2>&1
+	[ $? == 0 ] && return 0
+	##
+	#check_nexus_status
+	cd $PKGPWD
 	if [ ! -f "nexus.tar.gz" ]; then
 		echo "nexus安装包不存在，请下载"
 		exit 1
 	fi
-	cd $PKGPWD
 	tar zxvf nexus.tar.gz
 	cd nexus_local/
 
 	# 启动服务
 	sh nexus.sh start
+	
 }
 
 printPushHelp() {
@@ -183,7 +152,7 @@ printPushHelp() {
 pushImage() {
 	printChangeIp
 	cd $PKGPWD
-	tar zxvf k8s-centos7-v${IMAGETAG}_images.tar.gz
+	[ ! -d allimagedownload ] && tar zxvf k8s-centos7-v${IMAGETAG}_images.tar.gz
 	cd allimagedownload
 	sh load_image.sh $LOCALIP
 }
@@ -191,7 +160,7 @@ pushImage() {
 pushRpm() {
 	printChangeIp
 	cd $PKGPWD
-	tar zxvf k8s-v${IMAGETAG}-rpm.tar.gz
+	[ ! -d localrepo ] && tar zxvf k8s-v${IMAGETAG}-rpm.tar.gz
 	cd localrepo
 	sh push_rpm.sh $LOCALIP
 }
@@ -199,9 +168,9 @@ pushRpm() {
 Push() {
 	case $1 in
 	"all")
-		pushImage
-		sleep 10
 		pushRpm
+		sleep 10
+		pushImage
 		;;
 	"image")
 		pushImage
@@ -244,20 +213,19 @@ kubezansible() {
 kubezansibleRepo() {
 	printChangeIp
 
-	[ -d "/etc/yum.repos.d.bak" ] && echo "/etc/yum.repos.d.bak  备份目录存在，无需备份" && exit 0
-	mv /etc/yum.repos.d /etc/yum.repos.d.bak
-	mkdir -p /etc/yum.repos.d
-
-	[ -f "/etc/yum.repos.d/offline.repo" ] && echo "/etc/yum.repos.d/offline.repo 文件存在，无需再创建" && exit 0
-	cat >/etc/yum.repos.d/offline.repo <<EOF
+	[ -d "/etc/yum.repos.d.bak" ] && echo "/etc/yum.repos.d.bak  备份目录存在，无需备份" || cp -a /etc/yum.repos.d /etc/yum.repos.d.bak
+	rm -rf /etc/yum.repos.d/*
+	if [ ! -f "/etc/yum.repos.d/offline.repo" ];then
+		cat >/etc/yum.repos.d/offline.repo <<EOF
 [basenexus]
 name=Pixiuio Repository
 baseurl=http://${LOCALIP}:58000/repository/pixiuio-centos/
 enabled=1
 gpgcheck=0
 EOF
-
-	yum clean all && rm -rf /var/cache/yum/* && yum makecache
+	fi
+	yum clean all && yum makecache
+	sleep 3
 }
 
 kubezansibleInstall() {
@@ -266,44 +234,83 @@ kubezansibleInstall() {
 
 	if command -v "kubez-ansible" >/dev/null; then
 		echo "kubez-ansible 命令已经安装"
-		exit 0
+		return 0
 	else
 		cd $PKGPWD
+
 		# 安装依赖包
 		yum makecache
-		yum -y install ansible unzip python2-pip
+		yum -y install audit policycoreutils bash-completion
+		yum -y install ansible unzip python2-pip expect
+
 		# 解压 kubez-ansible 包
-		if [ ! -d "kubez-ansible-offline-master" ]; then
-			unzip kubez-ansible-offline-master.zip
-			cd kubez-ansible-offline-master
-			# 安装依赖
-			pip install pip/pbr-5.11.1-py2.py3-none-any.whl
+		[ ! -d "kubez-ansible-offline-master" ] && unzip kubez-ansible-offline-master.zip
+		cd kubez-ansible-offline-master
 
-			cp tools/git /usr/local/bin && git init
-			# 执行安装
-			python setup.py install
+		# 修改配置文件
+		updateConfig
 
-			cp -r etc/kubez/ /etc/
-			cp ansible/inventory/multinode ~
-			cd ~
-		fi
+		# 安装依赖
+		pip install pip/pbr-5.11.1-py2.py3-none-any.whl
+
+		cp tools/git /usr/local/bin && git init
+
+		# 执行安装
+		python setup.py install
+
+		cp -r etc/kubez/ /etc/
+		cp ansible/inventory/multinode ~
+		cd ~
 	fi
 }
 
-case $1 in
-"download")
-	Download $2
-	;;
-"install")
+sshPubkeyCreate(){
+	/usr/bin/expect <<EOF
+set timeout 30
+spawn ssh-keygen
+expect "Enter file in which to save the key (/root/.ssh/id_rsa):"
+send "\n"
+expect {
+    "Overwrite " { send "n\n" }
+    "Enter passphrase (empty for no passphrase):" {
+        send "\n"
+        expect "Enter same passphrase again:"
+        send "\n" }
+}
+expect eof
+EOF
+}
+
+updateConfig() {
+	sed -ri 's#192.168.16.210#'${LOCALIP}'#g' etc/kubez/globals.yml
+}
+
+function main() {
+	Download all
 	installNexus
-	;;
-"push")
-	Push $2
-	;;
-"kubezansible")
-	kubezansible $2
-	;;
-*)
-	printHelp
-	;;
-esac
+	Push all
+	kubezansible all
+	sshPubkeyCreate
+}
+
+main
+
+# case $1 in
+# "download")
+# 	Download $2
+# 	;;
+# "install")
+# 	installNexus
+# 	;;
+# "push")
+# 	Push $2
+# 	;;
+# "kubezansible")
+# 	kubezansible $2
+# 	;;
+# *)
+# 	printHelp
+# 	;;
+# esac
+
+

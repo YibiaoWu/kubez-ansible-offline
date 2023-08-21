@@ -1,0 +1,441 @@
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+  postgresql:
+    username: "postgresql_soc"
+    password: ""
+    database: "soc"
+    repmgrUsername: "postgresql_soc"
+    repmgrPassword: ""
+    repmgrDatabase: "soc"
+    existingSecret: "pg-secret"
+  ldap:
+    bindpw: ""
+    existingSecret: ""
+  pgpool:
+    adminUsername: "postgresql_soc"
+    adminPassword: ""
+    existingSecret: "pg-secret"
+kubeVersion: ""
+nameOverride: ""
+fullnameOverride: ""
+namespaceOverride: ""
+commonLabels: {}
+commonAnnotations: {}
+clusterDomain: cluster.local
+extraDeploy: []
+diagnosticMode:
+  enabled: false
+  command:
+    - sleep
+  args:
+    - infinity
+postgresql:
+  image:
+    registry: docker.io
+    repository: bitnami/postgresql-repmgr
+    tag: 14.4.0-debian-11-r9
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+    debug: false
+  labels: {}
+  podLabels: {}
+  replicaCount: 2
+  updateStrategy:
+    type: RollingUpdate
+  containerPorts:
+    postgresql: 5432
+  hostAliases: []
+  hostNetwork: false
+  hostIPC: false
+  podAnnotations: {}
+  podAffinityPreset: ""
+  podAntiAffinityPreset: hard
+  nodeAffinityPreset:
+    type: ""
+    key: ""
+    values: []
+  affinity: {}
+  nodeSelector: {}
+  tolerations: []
+  topologySpreadConstraints: []
+  priorityClassName: ""
+  schedulerName: ""
+  terminationGracePeriodSeconds: ""
+  podSecurityContext:
+    enabled: true
+    fsGroup: 1001
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 1001
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false
+  command: []
+  args: []
+  lifecycleHooks: {}
+  extraEnvVars:
+    - name: TZ
+      value: "Asia/Shanghai"
+  extraEnvVarsCM: ""
+  extraEnvVarsSecret: ""
+  extraVolumes: []
+  extraVolumeMounts: []
+  initContainers: []
+  sidecars: []
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      memory: 8Gi
+      cpu: '4'
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 10
+    successThreshold: 1
+    failureThreshold: 6
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 10
+    successThreshold: 1
+    failureThreshold: 3
+  startupProbe:
+    enabled: false
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 10
+    successThreshold: 1
+    failureThreshold: 10
+  customLivenessProbe: {}
+  customReadinessProbe: {}
+  customStartupProbe: {}
+  pdb:
+    create: false
+    minAvailable: 1
+    maxUnavailable: ""
+  username: postgres
+  password: ""
+  database: ""
+  existingSecret: ""
+  postgresPassword: ""
+  usePasswordFile: ""
+  repmgrUsePassfile: ""
+  repmgrPassfilePath: ""
+  upgradeRepmgrExtension: false
+  pgHbaTrustAll: true
+  syncReplication: true
+  repmgrUsername: repmgr
+  repmgrPassword: ""
+  repmgrDatabase: repmgr
+  repmgrLogLevel: NOTICE
+  repmgrConnectTimeout: 10
+  repmgrReconnectAttempts: 3
+  repmgrReconnectInterval: 10
+  repmgrFenceOldPrimary: false
+  repmgrChildNodesCheckInterval: 10
+  repmgrChildNodesConnectedMinCount: 1
+  repmgrChildNodesDisconnectTimeout: 30
+  usePgRewind: false
+  audit:
+    logHostname: false
+    logConnections: false
+    logDisconnections: false
+    pgAuditLog: ""
+    pgAuditLogCatalog: "off"
+    clientMinMessages: error
+    logLinePrefix: ""
+    logTimezone: "PRC"
+  sharedPreloadLibraries: "pgaudit, repmgr"
+  maxConnections: "1024"
+  postgresConnectionLimit: ""
+  dbUserConnectionLimit: ""
+  tcpKeepalivesInterval: ""
+  tcpKeepalivesIdle: ""
+  tcpKeepalivesCount: ""
+  statementTimeout: ""
+  pghbaRemoveFilters: ""
+  extraInitContainers: []
+  repmgrConfiguration: ""
+  configuration: ""
+  pgHbaConfiguration: ""
+  configurationCM: ""
+  extendedConf: ""
+  extendedConfCM: ""
+  initdbScripts: {}
+  initdbScriptsCM: ""
+  initdbScriptsSecret: ""
+  tls:
+    enabled: false
+    preferServerCiphers: true
+    certificatesSecret: ""
+    certFilename: ""
+    certKeyFilename: ""
+pgpool:
+  image:
+    registry: docker.io
+    repository: bitnami/pgpool
+    tag: 4.3.2-debian-11-r14-soc
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+    debug: false
+  customUsers: {}
+  usernames: ""
+  passwords: ""
+  hostAliases: []
+  customUsersSecret: ""
+  existingSecret: ""
+  srCheckDatabase: postgres
+  labels: {}
+  podLabels: {}
+  serviceLabels: {}
+  customLivenessProbe: {}
+  customReadinessProbe: {}
+  customStartupProbe: {}
+  command: []
+  args: []
+  lifecycleHooks: {}
+  extraEnvVars:
+    - name: TZ
+      value: "Asia/Shanghai"
+    - name: PGPOOL_CONNECTION_CACHE
+      value: "off"
+  extraEnvVarsCM: ""
+  extraEnvVarsSecret: ""
+  extraVolumes: []
+  extraVolumeMounts: []
+  initContainers: []
+  sidecars: []
+  replicaCount: 2
+  podAnnotations: {}
+  priorityClassName: ""
+  schedulerName: ""
+  terminationGracePeriodSeconds: ""
+  topologySpreadConstraints: []
+  podAffinityPreset: ""
+  podAntiAffinityPreset: soft
+  nodeAffinityPreset:
+    type: ""
+    key: ""
+    values: []
+  affinity: {}
+  nodeSelector: {}
+  tolerations: []
+  podSecurityContext:
+    enabled: true
+    fsGroup: 1001
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 1001
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      memory: 4Gi
+      cpu: '2'
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 5
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 2
+  startupProbe:
+    enabled: false
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 10
+    successThreshold: 1
+    failureThreshold: 10
+  pdb:
+    create: false
+    minAvailable: 1
+    maxUnavailable: ""
+  updateStrategy: {}
+  containerPorts:
+    postgresql: 5432
+  minReadySeconds: ""
+  adminUsername: admin
+  adminPassword: ""
+  usePasswordFile: ""
+  authenticationMethod: scram-sha-256
+  logConnections: false
+  logHostname: false
+  logPerNodeStatement: false
+  logLinePrefix: ""
+  clientMinMessages: error
+  numInitChildren: "1024"
+  reservedConnections: 2
+  maxPool: "50"
+  childMaxConnections: "1024"
+  childLifeTime: ""
+  clientIdleLimit: ""
+  connectionLifeTime: "630"
+  useLoadBalancing: true
+  loadBalancingOnWrite: transaction
+  configuration: ""
+  configurationCM: ""
+  initdbScripts: {}
+  initdbScriptsCM: ""
+  initdbScriptsSecret: ""
+  tls:
+    enabled: false
+    autoGenerated: false
+    preferServerCiphers: true
+    certificatesSecret: ""
+    certFilename: ""
+    certKeyFilename: ""
+    certCAFilename: ""
+ldap:
+  enabled: false
+  existingSecret: ""
+  uri: ""
+  basedn: ""
+  binddn: ""
+  bindpw: ""
+  bslookup: ""
+  scope: ""
+  tlsReqcert: ""
+  nssInitgroupsIgnoreusers: root,nslcd
+rbac:
+  create: false
+  rules: []
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}
+  automountServiceAccountToken: true
+psp:
+  create: false
+metrics:
+  enabled: false
+  image:
+    registry: docker.io
+    repository: bitnami/postgres-exporter
+    tag: 0.10.1-debian-11-r14
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+    debug: false
+  podSecurityContext:
+    enabled: true
+    runAsUser: 1001
+  resources:
+    limits: {}
+    requests: {}
+  containerPorts:
+    http: 9187
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 6
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 6
+  startupProbe:
+    enabled: false
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 10
+  customLivenessProbe: {}
+  customReadinessProbe: {}
+  customStartupProbe: {}
+  service:
+    type: ClusterIP
+    ports:
+      metrics: 9187
+    nodePorts:
+      metrics: ""
+    clusterIP: ""
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+    externalTrafficPolicy: Cluster
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9187"
+  customMetrics: {}
+  extraEnvVars:
+    - name: TZ
+      value: "Asia/Shanghai"
+  extraEnvVarsCM: ""
+  extraEnvVarsSecret: ""
+  serviceMonitor:
+    enabled: false
+    namespace: ""
+    interval: ""
+    scrapeTimeout: ""
+    annotations: {}
+    labels: {}
+    selector:
+      prometheus: kube-prometheus
+    relabelings: []
+    metricRelabelings: []
+    honorLabels: false
+    jobLabel: ""
+volumePermissions:
+  enabled: false
+  image:
+    registry: docker.io
+    repository: bitnami/bitnami-shell
+    tag: 11-debian-11-r14
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  podSecurityContext:
+    runAsUser: 0
+  resources:
+    limits: {}
+    requests: {}
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: ""
+  mountPath: /bitnami/postgresql
+  accessModes:
+    - ReadWriteOnce
+  size: 8Gi
+  annotations: {}
+  selector: {}
+service:
+  type: ClusterIP
+  ports:
+    postgresql: 5432
+  portName: postgresql
+  nodePorts:
+    postgresql: ""
+  loadBalancerIP: ""
+  loadBalancerSourceRanges: []
+  clusterIP: ""
+  externalTrafficPolicy: Cluster
+  extraPorts: []
+  sessionAffinity: "None"
+  sessionAffinityConfig: {}
+  annotations: {}
+  serviceLabels: {}
+networkPolicy:
+  enabled: false
+  allowExternal: true
+  egressRules:
+    denyConnectionsToExternal: false
+    customRules: []

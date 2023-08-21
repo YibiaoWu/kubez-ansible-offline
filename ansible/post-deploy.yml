@@ -19,9 +19,11 @@
         state: present
 
     - name: Configure kubectl auto-completion
-      lineinfile:
-        path: ~/.bashrc
-        line: 'source <(kubectl completion bash)'
+      blockinfile:
+        dest: ~/.bashrc
+        block: |
+              source <(kubectl completion bash)
+              source <(helm completion bash)
         state: present
         create: true
         insertafter: EOF

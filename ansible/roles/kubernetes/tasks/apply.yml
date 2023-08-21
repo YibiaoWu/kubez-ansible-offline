@@ -1,9 +1,12 @@
 ---
 - name: Ensure kubernetes applications directory exists
   file:
-    path: "{{ kube_application_dir }}"
+    path: "{{ item.name }}"
     state: directory
   delegate_to: "{{ groups['kube-master'][0] }}"
+  loop:
+  - { name: "{{ kube_application_dir }}" }
+  - { name: "{{ helm_charts_dir }}" }
   run_once: True
 
 - name: Apply kubernetes applications

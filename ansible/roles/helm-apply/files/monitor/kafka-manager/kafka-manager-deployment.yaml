@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitor-kafka-manager
+  namespace: monitor
+  labels:
+    app: monitor
+    component: monitor-kafka-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monitor
+      component: monitor-kafka-manager
+  template:
+    metadata:
+      labels:
+        app: monitor
+        component: monitor-kafka-manager
+    spec:
+      containers:
+        - name: monitor-kafka-manager
+          image: monitor-kafka-manager:main
+          env:
+            - name: ZK_HOSTS
+              value: zk-zookeeper.zookeeper:2181/kafka
+            - name: TZ
+              value: Asia/Shanghai
+            - name: KAFKA_MANAGER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kafka-mag-secret
+                  key: psd
+          ports:
+            - containerPort: 9000
+              name: http
+          livenessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 60
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 60
+          volumeMounts:
+            - name: monitor-kafka-manager-volume
+              mountPath: /opt/cmak-3.0.0.5/conf/application.conf
+              subPath: application.conf
+      volumes:
+        - name: monitor-kafka-manager-volume
+          configMap:
+            name: monitor-kafka-manager-config

@@ -3,8 +3,47 @@
 # Common dependence
 ####################
 common_dependent_packages:
-  - ipvsadm
   - ipset
+  - ipvsadm
+  - ntp
+  - chrony
+  - bash-completion
+  - net-tools
+  - nmap
+  - gzip
+  - socat
+  - tree
+  - atop
+  - fio
+  - iotop
+  - lrzsz
+  - supervisor
+  - unison
+  - MegaCli
+  - ftp
+  - nfs-utils
+  - git
+  - rsync
+  - lshw
+  - perf
+  - sysstat
+  - unzip
+  - lsof
+  - psmisc
+  - tcpdump
+  - wget
+  - jq
+  - python3
+  - telnet
+  - bind-utils
+  - keepalived
+  - nload
+  - zip
+  - dos2unix
+  - libaio-devel
+  - trace-cmd
+  - zstd
+  - vim
 
 change_selinux: True
 selinux_state: "disabled"

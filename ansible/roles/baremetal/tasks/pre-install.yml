@@ -31,8 +31,8 @@
     marker: "# {mark} ANSIBLE GENERATED HOSTS"
     block: |
         {% for host in groups['baremetal'] %}
-        {% set api_interface = hostvars[host]['api_interface'] %}
-        {{ hostvars[host]['ansible_' + api_interface]['ipv4']['address'] }} {{ hostvars[host]['ansible_hostname'] }}
+        {% set network_interface = hostvars[host]['network_interface'] %}
+        {{ hostvars[host]['ansible_' + network_interface]['ipv4']['address'] }} {{ hostvars[host]['ansible_hostname'] }}
         {% endfor %}
   become: True
 
@@ -60,8 +60,7 @@
     - ansible_distribution == item.os
 
 - name: Update yum cache
-  yum:
-    update_cache: yes
+  shell: yum clean all && yum makecache
   when:
     - ansible_distribution == "CentOS"
 
@@ -84,8 +83,6 @@
     - inventory_hostname in groups['baremetal']
     - ansible_distribution == 'CentOS'
 
-# Try to stop and disable delegated service,
-# let it go when not exists.
 - name: Disable firewalld service
   service:
     name: "{{ item }}"
@@ -97,12 +94,131 @@
     - inventory_hostname in groups['baremetal']
     - ansible_distribution == 'CentOS'
 
-- name: Disable ufw service
-  service:
-    name: ufw
-    state: stopped
-    enabled: False
-  failed_when: false
+- name: set timezone to Asia/Shanghai
+  timezone:
+    name: Asia/Shanghai
+  when:
+    - ansible_distribution == 'CentOS'
+
+- name: Set the time zone
+  shell: timedatectl set-timezone Asia/Shanghai
+  when:
+    - ansible_distribution == 'CentOS' 
+
+- name: increase system OS limit nofile
+  pam_limits:
+    domain: '*'
+    limit_type: "{{ item }}"
+    limit_item: nofile
+    value: 65535
+  with_items:
+    - hard
+    - soft
   when:
     - inventory_hostname in groups['baremetal']
-    - ansible_distribution == 'Ubuntu'
+    - ansible_distribution == 'CentOS'
+
+- name: Modify the default configuration
+  replace:
+    path: /etc/chrony.conf
+    before: '# Record the rate'
+    regexp: '^server'
+    replace: '#server'
+  when:
+    - inventory_hostname in groups['baremetal']
+    - ansible_distribution == 'CentOS'
+
+- name: Registry ip Ranger Var
+  shell: echo {{ hostvars[groups['baremetal'][0]]['ansible_' + network_interface]['ipv4']['address'] }} | awk -F. '{print $1"."$2"."$3".0/16"}'
+  register: ip_ranger
+  when:
+    - inventory_hostname in groups['baremetal']
+    - inventory_hostname == groups['docker-master'][0]
+    - ansible_distribution == 'CentOS'
+
+- name: Configure the time synchronization of master nodes
+  blockinfile:
+    dest: /etc/chrony.conf
+    state: present
+    block: |
+            local stratum 10
+            server {{ groups['docker-master'][0] }} iburst
+            allow {{ ip_ranger.stdout_lines[0] }}
+  when:
+    - inventory_hostname in groups['baremetal']
+    - inventory_hostname == groups['docker-master'][0]
+    - ansible_distribution == 'CentOS'
+    - ntpdate_enable == 'no'
+
+- name: Configure the time synchronization of worker nodes
+  lineinfile:
+    dest: /etc/chrony.conf
+    state: present
+    line: server {{ groups['docker-master'][0] }} iburst
+  when:
+    - inventory_hostname in groups['baremetal']
+    - inventory_hostname != groups['docker-master'][0]
+    - ansible_distribution == 'CentOS'
+    - ntpdate_enable == 'no'
+
+- name: Configure cluster time synchronization of worker nodes
+  lineinfile:
+    dest: /etc/chrony.conf
+    state: present
+    line: server {{ ntpserver }} iburst
+  when:
+    - inventory_hostname in groups['baremetal']
+    - ansible_distribution == 'CentOS'
+    - ntpdate_enable == 'yes'
+
+- name: Add ntpdate crontab disable ntpserver
+  lineinfile:
+    dest: /etc/crontab
+    line: "* * * * * root /usr/sbin/ntpdate -s {{ groups['docker-master'][0] }} &> /dev/null"
+  when:
+    - inventory_hostname in groups['baremetal']
+    - ansible_distribution == 'CentOS'
+    - ntpdate_enable == 'no'
+
+- name: Add ntpdate crontab enable ntpserver
+  lineinfile:
+    dest: /etc/crontab
+    line: "* * * * * root /usr/sbin/ntpdate -s {{ ntpserver }} &> /dev/null"
+  when:
+    - inventory_hostname in groups['baremetal']
+    - ansible_distribution == 'CentOS'
+    - ntpdate_enable == 'yes'
+
+- name: Changed sshd config
+  shell: sed  -ri  '/^GSSAPI/s/yes/no/g;s/^#UseDNS yes/UseDNS no/g' /etc/ssh/sshd_config
+  when:
+    - inventory_hostname in groups['baremetal']
+    - ansible_distribution == 'CentOS'
+
+- name: Changed sshd encryption
+  blockinfile:
+    dest: /etc/ssh/sshd_config
+    block: |
+          Ciphers aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes128-ctr
+          KexAlgorithms diffie-hellman-group14-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,diffie-hellman-group-exchange-sha256,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,curve25519-sha256,curve25519-sha256@libssh.org
+  when:
+    - inventory_hostname in groups['baremetal']
+    - ansible_distribution == 'CentOS'
+
+- name: Chown file permission
+  file:
+    path: "/usr/bin/pkexec"
+    mode: "0755"
+  when:
+    - inventory_hostname in groups['baremetal']
+    - ansible_distribution == 'CentOS'
+
+- name: Add soc User
+  user: 
+    name: soc
+    password: '$6$fI5T7Up3WF0E9ZHk$70.PT1ARXL67sPlA/rjf7RQZ.RngTP1mNRqBwb0gcnoLghVxqSY5jrg7yMtgWV/hrtdMUMQR9dytu0T4fvaIR/'
+    update_password: always
+  when:
+    - inventory_hostname in groups['baremetal']
+    - ansible_distribution == 'CentOS'
+

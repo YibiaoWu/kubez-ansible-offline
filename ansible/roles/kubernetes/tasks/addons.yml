@@ -18,4 +18,5 @@
     chart_extra_vars: "{{ charts[item.name].chart_extra_vars }}"
     chart_extra_flags: "{{ charts[item.name].chart_extra_flags if charts[item.name].chart_extra_flags is defined else [] }}"
     chart_enabled: "{{ item.enabled }}"
+    chart_localpath_enabled: "{{ item.localpath }}"
   loop: "{{ enable_charts }}"

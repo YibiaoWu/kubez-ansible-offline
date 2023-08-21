@@ -10,10 +10,22 @@
 - name: Clean up for kubernetes worker dirs
   become: true
   file:
-    path: "{{ kube_application_dir }}"
+    path: "{{ item.dir }}"
     state: absent
-  connection: local
-  run_once: True
+  loop:
+    - { dir: "{{ kube_application_dir }}" }
+    - { dir: "{{ helm_charts_dir }}" }
+    - { dir: "/etc/cni/net.d" }
+    - { dir: "/root/.kube" }
+    - { dir: "/etc/kubernetes/kubeadm-config.yaml" }
+  when:
+    - inventory_hostname in groups['kubernetes']
+
+- name: Clean iptables or ipvsadm rules
+  become: True
+  shell: iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X && ipvsadm -C
+  when:
+    - inventory_hostname in groups['kubernetes']
 
 - name: Print destroy results
   debug:

@@ -69,11 +69,14 @@ class Helm3Worker(object):
         self.name = self.params.get('name')
         self.namespace = self.params.get('namespace')
         self.chart = self.params.get('chart')
-
+        self.is_chart_localpath = self.params.get('is_chart_localpath')
         self.changed = False
         self.result = {}
+        self.result['chart_extra_flags'] = self.params.get('chart_extra_flags')
+        self.result['chart_extra_vars'] = self.params.get('chart_extra_vars')
 
     def run_cmd(self, cmd):
+        self.result["run_cmd"] = cmd
         proc = subprocess.Popen(cmd,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
@@ -88,7 +91,8 @@ class Helm3Worker(object):
 
     def present(self):
         # add repo
-        self.add_repo()
+        if not self.is_chart_localpath:
+            self.add_repo()
 
         # To install the applications by helm3
         # a. check whether the chart installed
@@ -117,7 +121,8 @@ class Helm3Worker(object):
             self.changed = True
 
     def absent(self):
-        self.remove_repo()
+        if not self.is_chart_localpath:
+            self.remove_repo()
 
         # To uninstall the applications by helm3
         # a. check whether the chart installed
@@ -131,9 +136,14 @@ class Helm3Worker(object):
     @property
     def is_installed(self):
         charts = self.run_cmd(
-            ' '.join(['helm', 'list', '-n', self.namespace, '--kubeconfig', KUBECONFIG])).split('\n')
+            ' '.join(['helm', 'list', '-n', self.namespace, '--kubeconfig', KUBECONFIG])).split('\n')[1:]
+        charts_dict = {}
         for chart in charts:
-            if self.name in chart and self.namespace in chart:
+            chart_name = chart.split()[0]
+            chart_namespace = chart.split()[1]
+            charts_dict[chart_name] = chart_namespace
+        for chart_key in charts_dict.keys():
+            if self.name == chart_key and self.namespace == charts_dict[chart_key]:
                 return True
         return False
 
@@ -174,6 +184,7 @@ def main():
         chart=dict(required=True, type='dict'),
         chart_extra_vars=dict(type='dict'),
         chart_extra_flags=dict(type='list'),
+        is_chart_localpath=dict(type='bool', default=False),
     )
     module = AnsibleModule(argument_spec=specs, bypass_checks=True)
     params = module.params

@@ -20,6 +20,9 @@
     - { name: "net.ipv4.ip_forward", value: 1 }
   when: inventory_hostname in groups['kubernetes']
 
+- include_tasks: custom-sysctl.yml
+  when: inventory_hostname in groups['kubernetes']
+  
 - name: Disable swap for kubernetes cluster
   block:
     - name: Disable swap temporary
@@ -32,6 +35,35 @@
         regexp: ".*swap.*"
         state: absent
   when: inventory_hostname in groups['kubernetes']
+
+- name: Ensure kubernetes applications directory exists
+  file:
+    path: "/etc/kubernetes"
+    state: directory
+  delegate_to: "{{ groups['kube-master'][0] }}"
+  run_once: True
+  when: enable_is_config | bool
+
+- name: Copy kube_config to the first master node
+  template:
+    src: "kubeadm-config.yaml.j2"
+    dest: "/etc/kubernetes/kubeadm-config.yaml"
+  delegate_to: "{{ groups['kube-master'][0] }}"
+  run_once: True
+  when: enable_is_config | bool
+
+- name: Initialize kubernetes master on config file
+  kube_toolbox:
+    module_name: kubeadm
+    module_args: init
+    module_extra_vars:
+      config: /etc/kubernetes/kubeadm-config.yaml
+    is_ha: "{{ enable_kubernetes_ha | bool }}"
+    is_config: "{{ enable_is_config | bool }}"
+    kube_api: "{{ kube_vip_address }}:{{ kube_vip_port }}"
+  delegate_to: "{{ groups['kube-master'][0] }}"
+  run_once: True
+  when: enable_is_config | bool
 
 - name: Initialize kubernetes master
   kube_toolbox:
@@ -46,9 +78,11 @@
       # To fix the number of available CPUs 1 is less than the required 2
       ignore-preflight-errors: NumCPU
     is_ha: "{{ enable_kubernetes_ha | bool }}"
+    is_config: "{{ enable_is_config | bool }}"
     kube_api: "{{ kube_vip_address }}:{{ kube_vip_port }}"
   delegate_to: "{{ groups['kube-master'][0] }}"
   run_once: True
+  when: not enable_is_config | bool
 
 - name: Wait for vip up for highly available clusters
   wait_for:

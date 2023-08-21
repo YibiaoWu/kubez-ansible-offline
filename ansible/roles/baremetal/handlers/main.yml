@@ -1,12 +1,28 @@
 ---
 - name: Restart docker service
-  service:
+  systemd:
     name: docker
+    daemon_reload: yes
     state: restarted
     enabled: yes
 
 - name: Restart containerd service
-  service:
+  systemd:
     name: containerd
+    daemon_reload: yes
+    state: restarted
+    enabled: yes
+
+- name: Restart crond service
+  systemd:
+    name: crond
+    daemon_reload: yes
+    state: restarted
+    enabled: yes
+
+- name: Restart chronyd service
+  systemd:
+    name: chronyd
+    daemon_reload: yes
     state: restarted
     enabled: yes

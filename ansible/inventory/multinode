@@ -1,7 +1,7 @@
 # When master nodes and woker nodes use different interfaces,
-# you need to comment out "api_interface" from the globals.yml
+# you need to comment out "network_interface" from the globals.yml
 # and specify like below:
-#kube01  api_interface=ep66
+#kube01  network_interface=ep66
 
 # User local connection in the assign groups, such as:
 #[docker-master]

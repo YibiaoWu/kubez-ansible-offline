@@ -1,0 +1,60 @@
+---
+- name: kernel option optimize
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_set: yes
+    state: present
+    reload: yes
+  become: true
+  with_items:
+    - { name: 'kernel.pid_max', value: '196608'}
+    - { name: 'net.ipv4.ip_forward', value: '1' }
+    - { name: 'vm.max_map_count', value: '262144'}
+    - { name: 'net.ipv4.neigh.default.gc_thresh1', value: '8000'}
+    - { name: 'net.ipv4.neigh.default.gc_thresh2', value: '9000'}
+    - { name: 'net.ipv4.neigh.default.gc_thresh3', value: '10000'}
+    - { name: 'fs.inotify.max_user_watches', value: '1048576'}
+    - { name: 'fs.inotify.max_user_instances', value: '8192'}
+    - { name: 'net.core.wmem_max', value: '33554432'}
+    - { name: 'net.core.rmem_max', value: '33554432'}
+    - { name: 'net.core.rmem_default', value: '16777216'}
+    - { name: 'net.core.wmem_default', value: '16777216'}
+    - { name: 'net.ipv4.tcp_rmem', value: '4096 4194304 33554432'}
+    - { name: 'net.ipv4.tcp_wmem', value: '4096 4194304 33554432'}
+    - { name: 'net.ipv4.tcp_mem', value: '6177504 4194304 33554432'}    
+    - { name: 'net.ipv4.udp_mem', value: '6177504 4194304 335544320'} 
+    - { name: 'net.core.netdev_max_backlog', value: '262144'}
+    - { name: 'net.ipv4.tcp_max_syn_backlog', value: '262144'}
+    - { name: 'net.ipv4.tcp_slow_start_after_idle', value: '0'}
+    - { name: 'net.ipv4.tcp_tw_reuse', value: '1'}
+    - { name: 'net.ipv4.conf.all.route_localnet', value: '1'}
+    - { name: 'fs.file-max', value: '2097152'}
+    - { name: 'fs.inotify.max_queued_events', value: '16384'}
+    - { name: 'net.ipv4.conf.default.promote_secondaries', value: '1'}
+    - { name: 'net.core.somaxconn', value: '40960'}
+    - { name: 'net.ipv4.tcp_syncookies', value: '1'}
+    - { name: 'net.ipv4.tcp_fin_timeout', value: '1'}
+    - { name: 'kernel.perf_cpu_time_max_percent', value: '0'}
+    - { name: 'vm.dirty_expire_centisecs', value: '1000'}
+    - { name: 'vm.dirty_background_ratio', value: '6'}
+    - { name: 'vm.dirty_ratio', value: '50'}
+    - { name: 'kernel.sem', value: '50100 128256000 50100 2560'}
+
+- name: The kubelet kernel optimization
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/90-kubelet.conf
+    sysctl_set: yes
+    state: present
+    reload: yes
+  become: true
+  with_items:
+    - { name: 'vm.panic_on_oom', value: '0' }
+    - { name: 'kernel.panic', value: '10'}
+    - { name: 'kernel.panic_on_oops', value: '1'}
+    - { name: 'kernel.keys.root_maxbytes', value: '25000000'}
+    - { name: 'net.ipv4.vs.conntrack', value: '1' }
+    - { name: 'net.ipv4.vs.conn_reuse_mode', value: '1' }
+    - { name: 'net.ipv4.vs.expire_nodest_conn', value: '1' }

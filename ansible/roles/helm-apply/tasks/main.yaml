@@ -1,13 +1,36 @@
 ---
+- name: Copy {{ name }} chart localpath to the first master node
+  synchronize:
+    src: "{{ name }}"
+    dest: "{{ helm_charts_dir }}"
+  delegate_to: "{{ groups['kube-master'][0] }}"
+  run_once: True
+  when: chart_localpath_enabled | bool
+
 - name: Install {{ name }} chart applications
   helm_toolbox:
     name: "{{ name }}"
     namespace: "{{ namespace }}"
     state: present
-    repository: "{{ repository}}"
+    repository: "{{ repository }}"
     chart: "{{ chart }}"
     chart_extra_vars: "{{ chart_extra_vars }}"
     chart_extra_flags: "{{ chart_extra_flags }}"
+    is_chart_localpath: "{{ chart_localpath_enabled | bool }}"
   delegate_to: "{{ groups['kube-master'][0] }}"
   run_once: True
   when: chart_enabled | bool
+
+- name: UnInstall {{ name }} chart applications
+  helm_toolbox:
+    name: "{{ name }}"
+    namespace: "{{ namespace }}"
+    state: absent
+    # repository: "{{ repository }}"
+    # chart: "{{ chart }}"
+    # chart_extra_vars: "{{ chart_extra_vars }}"
+    # chart_extra_flags: "{{ chart_extra_flags }}"
+    # is_chart_localpath: "{{ chart_localpath_enabled | bool }}"
+  delegate_to: "{{ groups['kube-master'][0] }}"
+  run_once: True
+  when: not chart_enabled | bool

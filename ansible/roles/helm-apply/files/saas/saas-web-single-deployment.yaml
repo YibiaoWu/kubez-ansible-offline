@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: saas-web
+  namespace: saas
+  labels:
+    app: saas
+    component: saas-web
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: saas
+      component: saas-web
+  template:
+    metadata:
+      labels:
+        app: saas
+        component: saas-web
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 20
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  component: saas-web
+              topologyKey: kubernetes.io/hostname
+      nodeSelector:
+        saas/soc-role: master
+      serviceAccountName: saas-user
+      containers:
+        - name: saas-web
+          image: saas:develop
+          args: ["web"]
+          env:
+            - name: APP_NAME
+              value: saas-web
+            - name: JAVA_OPTS
+              value: -Xms2G -Xmx6G  -XX:+UseCompressedOops  -Dfastjson.parser.safeMode=true  -Djava.awt.headless=true -Dcsp.sentinel.dashboard.server=sentinel-dashboard.monitor.svc.cluster.local:8081
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              memory: 500Mi
+              cpu: '500m'
+            limits:
+              memory: 8Gi
+              cpu: '8'
+          startupProbe:
+            httpGet:
+              path: /monitor/health
+              port: 8080
+            failureThreshold: 60
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /monitor/health
+              port: 8080
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /monitor/health
+              port: 8080
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: saas-web-config-volume
+              mountPath: /opt/saas/conf/conf.d
+            - name: data-dir
+              mountPath: /opt/data
+            - name: upload-dir
+              mountPath: /opt/uploadPackage
+            - name: ssh-path
+              mountPath: /root/.ssh
+      volumes:
+        - name: saas-web-config-volume
+          configMap:
+            name: saas-config
+        - name: data-dir
+          hostPath:
+            path: AiLogAuditorPath
+        - name: upload-dir
+          hostPath:
+            path: /data/soc/uploadPackage
+        - name: ssh-path
+          hostPath:
+            path: /root/.ssh

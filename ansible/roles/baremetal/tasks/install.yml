@@ -73,6 +73,13 @@
     - inventory_hostname in groups['docker-master'] or
       inventory_hostname in groups['docker-node']
 
+- name: Delete "-H fd://" option
+  become: yes
+  shell: sed -i 's/-H fd:\/\///' /usr/lib/systemd/system/docker.service
+  when:
+    - inventory_hostname in groups['docker-master'] or
+      inventory_hostname in groups['docker-node']
+      
 - name: Copy docker daemon jsons
   template:
     src: kube-daemon.json.j2
